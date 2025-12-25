@@ -7,27 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
+enum Role {
+  USER
+  MANAGER
+}
+
+enum Permission {
+  READ
+  WRITE
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
+  id        Int        @id @default(autoincrement())
+  email     String     @unique
   password  String
-  createdAt DateTime @default(now())
-  tasks     Task[]
+  role      Role       @default(USER)
+  createdAt DateTime   @default(now())
+
+  tasks     Task[]     @relation("UserTasks")
+  shares    TaskShare[]
 }
 
 model Task {
-  id          Int       @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   title       String
   description String?
-  completed   Boolean   @default(false)
-  priority    Priority  @default(MEDIUM)
-  createdAt   DateTime  @default(now())
-  userId      Int
-  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime    @default(now())
+
+  ownerId Int
+  owner   User        @relation("UserTasks", fields: [ownerId], references: [id])
+
+  shares  TaskShare[]
+}
+
+model TaskShare {
+  id         Int         @id @default(autoincrement())
+  permission Permission
+
+  taskId Int
+  userId Int
+
+  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([taskId, userId])
 }

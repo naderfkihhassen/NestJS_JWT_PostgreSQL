@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,7 @@ export class AuthService {
       },
     });
 
-    return this.signToken(user.id, user.email);
+    return this.signToken(user);
   }
 
   async login(email: string, password: string) {
@@ -38,14 +39,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.signToken(user.id, user.email);
+    return this.signToken(user);
   }
 
-  private signToken(userId: number, email: string) {
+  private signToken(user: User) {
     return {
       access_token: this.jwtService.sign({
-        sub: userId,
-        email,
+        userId: user.id,
+        role: user.role,
       }),
     };
   }

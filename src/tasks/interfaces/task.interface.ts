@@ -1,10 +1,5 @@
-import { Priority } from '@prisma/client';
-
-export interface Task {
+export interface TaskInterface {
   id: number;
   title: string;
-  description?: string;
-  completed: boolean;
-  priority: Priority;
-  createdAt: Date;
+  description?: string | null;
 }

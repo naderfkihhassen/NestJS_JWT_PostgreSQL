@@ -1,12 +1,55 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Param,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { TasksService } from './tasks/tasks.service';
+import { CreateTaskDto } from './tasks/dto/create-task.dto';
+import { Role } from '@prisma/client';
 
-@Controller()
+interface AuthenticatedRequest extends Request {
+  user: { userId: number; role: Role };
+}
+
+@Controller('tasks')
+@UseGuards(JwtAuthGuard)
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly tasksService: TasksService) {}
+
+  @Post()
+  createTask(
+    @Body() body: CreateTaskDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.tasksService.createTask(body, req.user.userId);
+  }
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  getMyTasks(@Request() req: AuthenticatedRequest) {
+    return this.tasksService.getMyTasks(req.user);
+  }
+
+  @Patch(':id')
+  updateTask(
+    @Param('id') id: string,
+    @Body() body: { title?: string },
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.tasksService.updateTask(+id, req.user, body);
+  }
+
+  @Post(':id/share')
+  shareTask(
+    @Param('id') id: string,
+    @Body() body: { userId: number; permission: 'READ' | 'WRITE' },
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.tasksService.shareTask(+id, req.user, body);
   }
 }
