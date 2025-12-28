@@ -47,7 +47,7 @@ export class AppController {
   @Post(':id/share')
   shareTask(
     @Param('id') id: string,
-    @Body() body: { userId: number; permission: 'READ' | 'WRITE' },
+    @Body() body: { email: string; permission: 'READ' | 'WRITE' },
     @Request() req: AuthenticatedRequest,
   ) {
     return this.tasksService.shareTask(+id, req.user, body);

@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Put,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -38,10 +39,15 @@ export class TasksController {
     return this.tasksService.updateTask(Number(id), req.user, body);
   }
 
+  @Delete(':id')
+  deleteTask(@Param('id') id: string, @Req() req: { user: JwtUser }) {
+    return this.tasksService.deleteTask(Number(id), req.user);
+  }
+
   @Post(':id/share')
   shareTask(
     @Param('id') id: string,
-    @Body() body: { userId: number; permission: 'READ' | 'WRITE' },
+    @Body() body: { email: string; permission: 'READ' | 'WRITE' },
     @Req() req: { user: JwtUser },
   ) {
     return this.tasksService.shareTask(Number(id), req.user, body);
