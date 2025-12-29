@@ -8,9 +8,7 @@ async function createApp() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: [
-      'https://nest-js-jwt-postgre-sql-mp2vi8eo3-naderfkihhassens-projects.vercel.app',
-    ],
+    origin: ['https://nest-js-jwt-postgre-sql-fe.vercel.app/'],
     credentials: true,
   });
 
