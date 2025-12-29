@@ -13,7 +13,7 @@ export class TasksService {
   constructor(private prisma: PrismaService) {}
 
   // ---------------- CREATE ----------------
-  async createTask(dto: CreateTaskDto, userId: number) {
+  createTask(dto: CreateTaskDto, userId: number) {
     return this.prisma.task.create({
       data: {
         title: dto.title,
