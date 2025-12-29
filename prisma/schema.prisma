@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 enum Role {
@@ -18,37 +19,46 @@ enum Permission {
 }
 
 model User {
-  id        Int        @id @default(autoincrement())
-  email     String     @unique
-  password  String
-  role      Role       @default(USER)
-  createdAt DateTime   @default(now())
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  password String
+  role     Role   @default(USER)
 
-  tasks     Task[]     @relation("UserTasks")
-  shares    TaskShare[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks  Task[]      @relation("UserTasks")
+  shares TaskShare[]
+
+  @@index([email])
 }
 
 model Task {
-  id          Int         @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   title       String
   description String?
-  createdAt   DateTime    @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   ownerId Int
-  owner   User        @relation("UserTasks", fields: [ownerId], references: [id])
+  owner   User @relation("UserTasks", fields: [ownerId], references: [id], onDelete: Cascade)
 
-  shares  TaskShare[]
+  shares TaskShare[]
+
+  @@index([ownerId])
 }
 
 model TaskShare {
-  id         Int         @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   permission Permission
 
   taskId Int
   userId Int
 
-  task Task @relation(fields: [taskId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId])
+  @@index([userId])
 }
