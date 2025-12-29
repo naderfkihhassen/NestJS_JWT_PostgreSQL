@@ -9,7 +9,6 @@ async function createApp() {
 
   app.enableCors({
     origin: [
-      'http://localhost:5500',
       'https://nest-js-jwt-postgre-sql-mp2vi8eo3-naderfkihhassens-projects.vercel.app',
     ],
     credentials: true,
@@ -30,7 +29,7 @@ async function bootstrap(): Promise<void> {
 }
 
 if (process.env.NODE_ENV !== 'production') {
-  void bootstrap(); // ✅ no-floating-promises fixed
+  void bootstrap();
 }
 
 /**
