@@ -5,13 +5,14 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS with your specific frontend URL
+  // Enable CORS - allow all Vercel deployments
   app.enableCors({
     origin: [
       'http://localhost:5500',
       'http://127.0.0.1:5500',
       'https://nest-js-jwt-postgre-sql-fe.vercel.app',
-      /^https:\/\/nest-js-jwt-postgre-sql-fe.*\.vercel\.app$/, // Allow preview deployments
+      // Allow all preview deployments
+      /^https:\/\/nest-js-jwt-postgre-sql.*\.vercel\.app$/,
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
