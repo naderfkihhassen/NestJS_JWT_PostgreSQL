@@ -2,7 +2,8 @@ import {
   Controller,
   Post,
   Get,
-  Patch,
+  Put,
+  Delete,
   Body,
   Param,
   Request,
@@ -11,6 +12,7 @@ import {
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { TasksService } from './tasks/tasks.service';
 import { CreateTaskDto } from './tasks/dto/create-task.dto';
+import { UpdateTaskDto } from './tasks/dto/update-task.dto';
 import { Role } from '@prisma/client';
 
 interface AuthenticatedRequest extends Request {
@@ -35,13 +37,18 @@ export class AppController {
     return this.tasksService.getMyTasks(req.user);
   }
 
-  @Patch(':id')
+  @Put(':id')
   updateTask(
     @Param('id') id: string,
-    @Body() body: { title?: string },
+    @Body() body: UpdateTaskDto,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.tasksService.updateTask(+id, req.user, body);
+  }
+
+  @Delete(':id')
+  deleteTask(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.tasksService.deleteTask(+id, req.user);
   }
 
   @Post(':id/share')
