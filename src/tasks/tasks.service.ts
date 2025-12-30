@@ -1,18 +1,35 @@
 import {
-  Injectable,
   ForbiddenException,
+  Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { JwtUser } from './interfaces/jwt-user.interface';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { ShareTaskDto } from './dto/share-task.dto';
+import { Role, Permission } from '@prisma/client';
+import { JwtUser } from './interfaces/jwt-user.interface';
+
+interface TaskWithRelations {
+  id: number;
+  title: string;
+  description: string | null;
+  ownerId: number;
+  createdAt: Date;
+  shares: Array<{
+    userId: number;
+    permission: Permission;
+  }>;
+  owner: {
+    id: number;
+    email: string;
+  };
+}
 
 @Injectable()
 export class TasksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // ---------------- CREATE ----------------
   createTask(dto: CreateTaskDto, userId: number) {
     return this.prisma.task.create({
       data: {
@@ -23,127 +40,152 @@ export class TasksService {
     });
   }
 
-  // ---------------- GET MY TASKS ----------------
   async getMyTasks(user: JwtUser) {
-    const tasks = await this.prisma.task.findMany({
-      where: {
-        OR: [
-          { ownerId: user.userId },
-          {
-            shares: {
-              some: { userId: user.userId },
-            },
+    let tasks: TaskWithRelations[];
+
+    if (user.role === Role.MANAGER) {
+      tasks = await this.prisma.task.findMany({
+        include: {
+          shares: true,
+          owner: {
+            select: { id: true, email: true },
           },
-        ],
-      },
-      include: {
-        shares: true,
-      },
-    });
+        },
+      });
+    } else {
+      tasks = await this.prisma.task.findMany({
+        where: {
+          OR: [
+            { ownerId: user.userId },
+            { shares: { some: { userId: user.userId } } },
+          ],
+        },
+        include: {
+          shares: true,
+          owner: {
+            select: { id: true, email: true },
+          },
+        },
+      });
+    }
 
     return tasks.map((task) => {
-      const share = task.shares.find((s) => s.userId === user.userId);
-
       const isOwner = task.ownerId === user.userId;
+      const userShare = task.shares.find(
+        (share) => share.userId === user.userId,
+      );
 
       return {
         id: task.id,
         title: task.title,
         description: task.description,
         ownerId: task.ownerId,
-        isOwner,
-        permission: isOwner ? 'OWNER' : (share?.permission ?? 'READ'),
+        createdAt: task.createdAt,
+        isOwner: isOwner,
+        permission: userShare?.permission || null,
+        owner: task.owner,
       };
     });
   }
 
-  // ---------------- UPDATE ----------------
-  async updateTask(taskId: number, user: JwtUser, dto: UpdateTaskDto) {
+  async updateTask(id: number, user: JwtUser, dto: UpdateTaskDto) {
     const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
+      where: { id },
       include: { shares: true },
     });
 
     if (!task) throw new NotFoundException('Task not found');
 
-    const isOwner = task.ownerId === user.userId;
-    const share = task.shares.find((s) => s.userId === user.userId);
+    const canWrite =
+      task.ownerId === user.userId ||
+      user.role === Role.MANAGER ||
+      task.shares.some(
+        (s) => s.userId === user.userId && s.permission === Permission.WRITE,
+      );
 
-    if (!isOwner && share?.permission !== 'WRITE') {
-      throw new ForbiddenException('No edit permission');
-    }
+    if (!canWrite)
+      throw new ForbiddenException(
+        'You do not have permission to edit this task',
+      );
 
     return this.prisma.task.update({
-      where: { id: taskId },
-      data: dto,
+      where: { id },
+      data: {
+        title: dto.title,
+        description: dto.description,
+      },
     });
   }
 
-  // ---------------- SHARE ----------------
-  async shareTask(
-    taskId: number,
-    user: JwtUser,
-    dto: { email: string; permission: 'READ' | 'WRITE' },
-  ) {
+  async deleteTask(id: number, user: JwtUser) {
     const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
+      where: { id },
+      include: { shares: true },
     });
 
-    if (!task || task.ownerId !== user.userId) {
-      throw new ForbiddenException('Only owner can share');
+    if (!task) throw new NotFoundException('Task not found');
+
+    const canDelete =
+      task.ownerId === user.userId ||
+      user.role === Role.MANAGER ||
+      task.shares.some(
+        (s) => s.userId === user.userId && s.permission === Permission.WRITE,
+      );
+
+    if (!canDelete)
+      throw new ForbiddenException(
+        'You do not have permission to delete this task',
+      );
+
+    // Delete all shares first (due to foreign key constraints)
+    await this.prisma.taskShare.deleteMany({
+      where: { taskId: id },
+    });
+
+    // Then delete the task
+    return this.prisma.task.delete({
+      where: { id },
+    });
+  }
+
+  async shareTask(id: number, user: JwtUser, dto: ShareTaskDto) {
+    const task = await this.prisma.task.findUnique({ where: { id } });
+
+    if (!task) throw new NotFoundException('Task not found');
+
+    if (task.ownerId !== user.userId && user.role !== Role.MANAGER) {
+      throw new ForbiddenException('You can only share your own tasks');
     }
 
-    const targetUser = await this.prisma.user.findUnique({
+    // Find the user by email
+    const userToShareWith = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
 
-    if (!targetUser) throw new NotFoundException('User not found');
+    if (!userToShareWith) {
+      throw new NotFoundException('User not found with that email');
+    }
+
+    // Prevent sharing with yourself
+    if (userToShareWith.id === user.userId) {
+      throw new ForbiddenException('You cannot share a task with yourself');
+    }
 
     return this.prisma.taskShare.upsert({
       where: {
         taskId_userId: {
-          taskId,
-          userId: targetUser.id,
+          taskId: id,
+          userId: userToShareWith.id,
         },
       },
       update: {
         permission: dto.permission,
       },
       create: {
-        taskId,
-        userId: targetUser.id,
+        taskId: id,
+        userId: userToShareWith.id,
         permission: dto.permission,
       },
-    });
-  }
-
-  async deleteTask(taskId: number, user: JwtUser) {
-    const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
-      include: { shares: true },
-    });
-
-    if (!task) {
-      throw new Error('Task not found');
-    }
-
-    const isOwner = task.ownerId === user.userId;
-
-    const hasWritePermission = task.shares.some(
-      (s) => s.userId === user.userId && s.permission === 'WRITE',
-    );
-
-    if (!isOwner && !hasWritePermission) {
-      throw new Error('You do not have permission to delete this task');
-    }
-
-    // delete shares first (FK safety)
-    await this.prisma.taskShare.deleteMany({
-      where: { taskId },
-    });
-
-    return this.prisma.task.delete({
-      where: { id: taskId },
     });
   }
 }

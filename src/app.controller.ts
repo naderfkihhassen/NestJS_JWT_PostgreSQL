@@ -12,6 +12,7 @@ import {
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { TasksService } from './tasks/tasks.service';
 import { CreateTaskDto } from './tasks/dto/create-task.dto';
+import { ShareTaskDto } from './tasks/dto/share-task.dto';
 import { UpdateTaskDto } from './tasks/dto/update-task.dto';
 import { Role } from '@prisma/client';
 
@@ -54,7 +55,7 @@ export class AppController {
   @Post(':id/share')
   shareTask(
     @Param('id') id: string,
-    @Body() body: { email: string; permission: 'READ' | 'WRITE' },
+    @Body() body: ShareTaskDto,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.tasksService.shareTask(+id, req.user, body);
