@@ -19,18 +19,16 @@ enum Permission {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  password String
-  role     Role   @default(USER)
+  id                Int        @id @default(autoincrement())
+  email             String     @unique
+  password          String
+  role              Role       @default(USER)
+  isVerified        Boolean    @default(false)
+  verificationToken String?    @unique
+  createdAt         DateTime   @default(now())
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tasks  Task[]      @relation("UserTasks")
-  shares TaskShare[]
-
-  @@index([email])
+  tasks     Task[]     @relation("UserTasks")
+  shares    TaskShare[]
 }
 
 model Task {
