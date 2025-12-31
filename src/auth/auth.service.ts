@@ -43,11 +43,9 @@ export class AuthService {
       },
     });
 
-    // Send verification email
     try {
       await this.mailService.sendVerificationEmail(email, verificationToken);
     } catch (error) {
-      // If email fails, delete the user and throw error
       await this.prisma.user.delete({ where: { id: user.id } });
       throw new BadRequestException(
         'Failed to send verification email. Please try again.',
