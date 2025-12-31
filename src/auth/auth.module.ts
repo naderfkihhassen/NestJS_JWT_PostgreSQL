@@ -13,7 +13,9 @@ import { MailService } from '../mail/mail.service';
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'super_secret_key_123',
-      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '1d' },
+      signOptions: {
+        expiresIn: '7d',
+      },
     }),
   ],
   providers: [AuthService, JwtStrategy, MailService],
