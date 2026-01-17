@@ -18,7 +18,6 @@ export class AuthService {
   ) {}
 
   async register(email: string, password: string) {
-    // Check if user already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -27,13 +26,10 @@ export class AuthService {
       throw new BadRequestException('User with this email already exists');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate verification token
     const verificationToken = randomBytes(32).toString('hex');
 
-    // Create user
     const user = await this.prisma.user.create({
       data: {
         email,
@@ -72,7 +68,6 @@ export class AuthService {
       throw new BadRequestException('Email already verified');
     }
 
-    // Mark user as verified
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -81,7 +76,6 @@ export class AuthService {
       },
     });
 
-    // Generate JWT token
     const payload = { userId: user.id, role: user.role };
     const access_token = this.jwtService.sign(payload);
 
@@ -98,7 +92,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if email is verified
     if (!user.isVerified) {
       throw new UnauthorizedException(
         'Please verify your email before logging in',
@@ -128,7 +121,6 @@ export class AuthService {
       throw new BadRequestException('Email already verified');
     }
 
-    // Generate new verification token
     const verificationToken = randomBytes(32).toString('hex');
 
     await this.prisma.user.update({

@@ -16,13 +16,11 @@ export class AuthController {
     try {
       const result = await this.authService.verifyEmail(token);
 
-      // Redirect to frontend with token in URL
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
       return res.redirect(
         `${frontendUrl}?verified=true&token=${result.access_token}`,
       );
     } catch (error) {
-      // Redirect to frontend with error
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';

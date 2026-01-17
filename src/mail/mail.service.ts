@@ -18,7 +18,6 @@ export class MailService {
   }
 
   async sendVerificationEmail(email: string, token: string) {
-    // Point to BACKEND verify endpoint which will redirect to frontend
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
     const verificationUrl = `${backendUrl}/auth/verify?token=${token}`;
 

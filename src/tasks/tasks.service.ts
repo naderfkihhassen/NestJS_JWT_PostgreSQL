@@ -137,12 +137,10 @@ export class TasksService {
         'You do not have permission to delete this task',
       );
 
-    // Delete all shares first (due to foreign key constraints)
     await this.prisma.taskShare.deleteMany({
       where: { taskId: id },
     });
 
-    // Then delete the task
     return this.prisma.task.delete({
       where: { id },
     });
@@ -157,7 +155,6 @@ export class TasksService {
       throw new ForbiddenException('You can only share your own tasks');
     }
 
-    // Find the user by email
     const userToShareWith = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -166,7 +163,6 @@ export class TasksService {
       throw new NotFoundException('User not found with that email');
     }
 
-    // Prevent sharing with yourself
     if (userToShareWith.id === user.userId) {
       throw new ForbiddenException('You cannot share a task with yourself');
     }
